@@ -10,7 +10,7 @@ using System.ComponentModel;
 
 string modelId = "jjconsole";
 string endpoint = "https://jjazscoai.openai.azure.com/";
-string apiKey = "4a9ecd0d36744b7999f0ffbb2e0ffdd7";
+string apiKey = "";
 
 // Create the kernel
 var builder = Kernel.CreateBuilder();
