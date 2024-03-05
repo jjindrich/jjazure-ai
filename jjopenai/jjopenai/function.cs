@@ -8,42 +8,57 @@ using System.ComponentModel;
 
 // https://learn.microsoft.com/en-us/semantic-kernel/prompts/templatizing-prompts?tabs=Csharp
 
-public class EmailPlugin
+public class WeatherPlugin
 {
     [KernelFunction]
-    [Description("Sends an email to a recipient.")]
-    public async Task SendEmailAsync(
-        Kernel kernel,
-        [Description("Semicolon delimitated list of emails of the recipients")] string recipientEmails,
-        string subject,
-        string body
-    )
+    [Description("Returns the current weather for a given location.")]
+    [return: Description("The current weather for the given location")]
+    public async Task<string> GetCurrentWeatherAsync(
+               Kernel kernel,
+               [Description("The location to get the weather for")] string location
+           )
     {
-        // Add logic to send an email using the recipientEmails, subject, and body
-        // For now, we'll just print out a success message to the console
-        Console.WriteLine("Email sent!");
+        // Add logic to get the current weather for the given location
+        // For now, we'll just return a static string
+        return "The current weather is 72°F and sunny.";
     }
 }
 
-public class AuthorEmailPlanner
+public class WeatherHistoryPlugin
 {
     [KernelFunction]
-    [Description("Returns back the required steps necessary to author an email.")]
-    [return: Description("The list of steps needed to author an email")]
-    public async Task<string> GenerateRequiredStepsAsync(
-        Kernel kernel,
-        [Description("A 2-3 sentence description of what the email should be about")] string topic,
-        [Description("A description of the recipients")] string recipients
-    )
+    [Description("Returns the weather history for a given location.")]
+    [return: Description("The weather history for the given location")]
+    public async Task<string> GetWeatherHistoryAsync(
+                      Kernel kernel,
+                [Description("The location to get the weather history for")] string location
+                  )
     {
+        // Add logic to get the weather history for the given location
+        // For now, we'll just return a static string
+        return "The weather history is 22°F and sunny.";
+    }
+}
+
+public class FriendPlugin
+{
+    [KernelFunction]
+    [Description("Returns the description of friend. ")]
+    [return: Description("Returns the description of friend.")]
+    public async Task<string> GetFriendAsync(
+                      Kernel kernel,
+                [Description("Name of friend")] string name
+                  )
+    {
+        // Add logic to get the weather history for the given location
+        // For now, we'll just return a static string
+
         // Prompt the LLM to generate a list of steps to complete the task
         var result = await kernel.InvokePromptAsync($"""
-        I'm going to write an email to {recipients} about {topic} on behalf of a user.
-        Before I do that, can you succinctly recommend the top 3 steps I should take in a numbered list?
-        I want to make sure I don't forget anything that would help my user's email sound more professional.
+        I'm going to write description of friend {name}.
+        Is very friendly but is coming late on meetings.
         """, new() {
-            { "topic", topic },
-            { "recipients", recipients }
+            { "name", name }
         });
 
         // Return the plan back to the agent

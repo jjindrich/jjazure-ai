@@ -15,8 +15,9 @@ string apiKey = "";
 // Create the kernel
 var builder = Kernel.CreateBuilder();
 builder.Services.AddAzureOpenAIChatCompletion(modelId, endpoint, apiKey);
-builder.Plugins.AddFromType<AuthorEmailPlanner>();
-builder.Plugins.AddFromType<EmailPlugin>();
+builder.Plugins.AddFromType<WeatherPlugin>();
+builder.Plugins.AddFromType<WeatherHistoryPlugin>();
+builder.Plugins.AddFromType<FriendPlugin>();
 Kernel kernel = builder.Build();
 
 // Retrieve the chat completion service from the kernel
@@ -24,10 +25,7 @@ IChatCompletionService chatCompletionService = kernel.GetRequiredService<IChatCo
 
 // Create the chat history
 ChatHistory chatMessages = new ChatHistory("""
-You are a friendly assistant who likes to follow the rules. Your name is JJagent. You will complete required steps
-and request approval before taking any consequential actions. If the user doesn't provide
-enough information for you to complete a task, you will keep asking questions until you have
-enough information to complete the task.
+You are a friendly assistant who likes to follow the rules. Your name is JJagent.
 """);
 
 // Start the conversation
@@ -63,3 +61,8 @@ while (true)
     // Add the message from the agent to the chat history
     chatMessages.AddAssistantMessage(fullMessage);
 }
+
+// samples:
+// Jake bylo pocasi minuly rok v New York ?
+// Jake bylo pocasi v New York v unoru 2020 ?
+// Máš popis kamaráda Erika ?
