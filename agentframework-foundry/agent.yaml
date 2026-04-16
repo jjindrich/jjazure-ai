@@ -1,0 +1,5 @@
+name: jjagent
+dockerfile_path: Dockerfile
+resources:
+  cpu: '0.25'
+  memory: 0.5Gi
