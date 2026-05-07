@@ -1,127 +1,99 @@
-# JJAgent
+# Basic Agent Framework - Responses API
 
-Minimal C# Microsoft Agent Framework sample prepared for Azure AI Foundry hosted-agent deployment.
+A simple general-purpose AI assistant built with the Agent Framework SDK, hosted with the responses API.
 
-## What the app does
+## Prerequisites
 
-- Creates a `ChatClientAgent` using Microsoft Agent Framework and Azure OpenAI.
-- Registers one deterministic simulated weather tool named `GetWeather`.
-- Starts the Foundry hosted-agent adapter via `RunAIAgentAsync(...)`.
+- .NET 10.0 SDK
+- An Azure AI Foundry project with a deployed model
 
-## Required environment variables
+## Getting Started
 
-Set these before running locally or configure them for the hosted-agent deployment:
+1. Set the environment variables in the `.env` file with your project endpoint and model deployment name.
 
-- `AZURE_OPENAI_ENDPOINT`
-- `AZURE_OPENAI_DEPLOYMENT_NAME`
+2. Log in to Azure:
 
-Authentication uses `DefaultAzureCredential`, so local development works with a signed-in Azure CLI session.
+   ```bash
+   az login
+   ```
 
-## Run locally
+3. Build and run the agent:
 
-```powershell
-$env:AZURE_OPENAI_ENDPOINT="https://<your-openai-resource>.openai.azure.com/"
-$env:AZURE_OPENAI_DEPLOYMENT_NAME="<your-model-deployment-name>"
-dotnet run
+   ```bash
+   dotnet run
+   ```
+
+## Interacting with the Agent
+
+### Test with cURL
+
+Send a POST request with a JSON body to invoke the agent:
+
+```bash
+curl -X POST http://localhost:8088/responses -H "Content-Type: application/json" -d '{"input": "Hello! What can you help me with?", "stream": false}'
 ```
 
-## Deploy to Azure AI Foundry as a hosted agent
+#### Multi-turn Conversation
 
-Use the **Microsoft Foundry for Visual Studio Code** extension for this C# project.
+Use the previous response ID from the response body to continue the conversation:
 
-### Prerequisites
-
-- Azure subscription
-- Visual Studio Code
-- Microsoft Foundry for Visual Studio Code extension
-- .NET 9 SDK
-- Permission to create Foundry resources
-- The Foundry project managed identity must have:
-  - **Azure AI User**
-  - **AcrPull**
-
-### 1. Create a Foundry project
-
-In VS Code:
-
-1. Open the Command Palette.
-2. Run `Microsoft Foundry: Create Project`.
-3. Select your Azure subscription.
-4. Create or select a resource group.
-5. Enter a project name.
-
-### 2. Deploy a model
-
-In VS Code:
-
-1. Open the Command Palette.
-2. Run `Microsoft Foundry: Open Model Catalog`.
-3. Pick a model you want to use.
-4. Deploy it to the Foundry project.
-
-After deployment, collect the model settings that the app uses:
-
-- `AZURE_OPENAI_ENDPOINT`
-- `AZURE_OPENAI_DEPLOYMENT_NAME`
-
-If you use a separate Azure OpenAI resource for inference, configure those values from that resource instead.
-
-### 3. Test the agent locally
-
-Authenticate first:
-
-```powershell
-az login
+```bash
+curl -X POST http://localhost:8088/responses -H "Content-Type: application/json" -d '{"input": "Tell me more", "previous_response_id": "<RESPONSE_ID>"}'
 ```
 
-Then run the app:
+### Test with Agent Inspector
 
-```powershell
-$env:AZURE_OPENAI_ENDPOINT="https://<your-openai-resource>.openai.azure.com/"
-$env:AZURE_OPENAI_DEPLOYMENT_NAME="<your-model-deployment-name>"
-dotnet restore
-dotnet build
-dotnet run
-```
+While the agent is running locally, you can interact with it visually using the Agent Inspector:
 
-The app should start as the hosted-agent HTTP server.
+1. Open the **Developer Tools** tree view in the AI Toolkit activity bar.
+2. Expand the **Build** section.
+3. Click **Agent Inspector** to launch the inspector and connect to your locally running agent.
+4. Multi-turn conversation is supported by default.
 
-### 4. Deploy the hosted agent
+Or you can directly run `AI Toolkit: Open Agent Inspector` from VS Code command pallete.
 
-In VS Code:
+## Deploying to Microsoft Foundry
 
-1. Open the Command Palette.
-2. Run `Microsoft Foundry: Deploy Hosted Agent`.
-3. Select your Foundry workspace.
-4. Make sure the deployment has these environment variables configured:
+To deploy your agent to Microsoft Foundry:
 
-   - `AZURE_OPENAI_ENDPOINT`
-   - `AZURE_OPENAI_DEPLOYMENT_NAME`
+1. Open the Command Palette (`Ctrl+Shift+P`).
+2. Run **Microsoft Foundry: Deploy Hosted Agent**.
+3. The extension reads `agent.yaml` and auto-populates what it can. You may be prompted for:
+   - **Agent name** -- the name registered with the hosting service.
+   - **Dockerfile** -- auto-detected from workspace root, or select manually.
+   - **Container registry** -- defaults to auto-created; optionally provide your own ACR.
+   - **Resource size** -- CPU and memory allocation:
 
-5. When asked for the container agent file, choose:
+     | Option                        | CPU  | Memory |
+     | ----------------------------- | ---- | ------ |
+     | 0.25 CPU cores, 0.5 Gi memory | 0.25 | 0.5 Gi |
+     | 0.5 CPU cores, 1 Gi memory    | 0.5  | 1.0 Gi |
+     | 1 CPU cores, 2 Gi memory      | 1.0  | 2.0 Gi |
+     | 2 CPU cores, 4 Gi memory      | 2.0  | 4.0 Gi |
 
-   `C:\Users\jajindri\source\repos\jjazure-ai\agentframework\jjagent.csproj`
-
-6. Choose the CPU and memory size.
-7. Confirm deployment.
-
-### 5. Verify the deployment
-
-After deployment:
-
-1. Open the **Hosted Agents (Preview)** view in the Foundry extension.
-2. Open the deployed agent version.
-3. Verify the status is **Started**.
-4. Open the playground and test prompts such as:
-   - `What's the weather in Prague?`
-   - `Give me a weather forecast for Seattle.`
-
-The response should clearly indicate that the forecast is simulated.
+4. The extension builds the container image in ACR, creates the agent version, and assigns required RBAC roles automatically.
 
 ## Troubleshooting
 
-- If local startup fails with `AZURE_OPENAI_ENDPOINT is not set`, make sure both required environment variables are defined.
-- If authentication fails, rerun `az login`.
-- If deployment succeeds but the agent does not start, verify the project managed identity has **AcrPull**.
-- If deployment fails with `Could not load type 'Microsoft.Extensions.AI.UserInputRequestContent'`, make sure the project stays on the AgentServer-compatible package set: target `.NET 9` and keep `Microsoft.Extensions.AI.OpenAI` aligned to `10.3.0`. A newer direct `Microsoft.Extensions.AI.*` reference can force `Microsoft.Extensions.AI.Abstractions` to `10.5.0`, which is incompatible with `Azure.AI.AgentServer.AgentFramework` `1.0.0-beta.11`.
-- Hosted agents are currently in preview, so deployment behavior and portal UX can change.
+### Azure OpenAI Permission Denied (401)
+
+The identity running the agent does not have the required RBAC roles on the Azure AI Foundry project. Assign the following roles:
+
+- **Cognitive Services OpenAI User**
+- **Azure AI User**
+
+Use the Azure CLI to assign them:
+
+```
+az role assignment create \
+  --assignee <principal-id> \
+  --role "Cognitive Services OpenAI User" \
+  --scope /subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.CognitiveServices/accounts/<ai-services-account-name>
+
+az role assignment create \
+  --assignee <principal-id> \
+  --role "Azure AI User" \
+  --scope /subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.CognitiveServices/accounts/<ai-services-account-name>
+```
+
+> **Note:** It may take a few minutes for role assignments to propagate. Retry the request after waiting.

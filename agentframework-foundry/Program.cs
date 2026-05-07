@@ -1,49 +1,33 @@
-using System.ComponentModel;
-using Azure.AI.AgentServer.AgentFramework.Extensions;
-using Azure.AI.OpenAI;
+// Copyright (c) Microsoft. All rights reserved.
+
+using Azure.AI.AgentServer.Core;
+using Azure.AI.Projects;
 using Azure.Identity;
+using DotNetEnv;
 using Microsoft.Agents.AI;
-using Microsoft.Extensions.AI;
+using Microsoft.Agents.AI.Foundry.Hosting;
 
-string openAiEndpoint = "https://jjaitestv2gwc-resource.openai.azure.com";
-string modelDeploymentName = "gpt-5-mini";
+Env.TraversePath().Load();
 
-DefaultAzureCredential credential = new();
+var projectEndpoint = new Uri(Environment.GetEnvironmentVariable("AZURE_AI_PROJECT_ENDPOINT")
+    ?? throw new InvalidOperationException("AZURE_AI_PROJECT_ENDPOINT environment variable is not set."));
+var deployment = Environment.GetEnvironmentVariable("AZURE_AI_MODEL_DEPLOYMENT_NAME") ?? "gpt-4o";
 
-IChatClient chatClient = new AzureOpenAIClient(new Uri(openAiEndpoint), credential)
-    .GetChatClient(modelDeploymentName)
-    .AsIChatClient();
-
-AIAgent agent = new ChatClientAgent(
-        chatClient,
-        name: "weather-hosted-agent",
+AIAgent agent = new AIProjectClient(projectEndpoint, new DefaultAzureCredential())
+    .AsAIAgent(
+        model: deployment,
         instructions: """
-            You are a helpful weather assistant.
-            Use the GetWeather tool for all weather questions.
-            Always make it clear that the forecast is simulated.
-            Keep answers concise.
+            You are a helpful AI assistant hosted as a Foundry Hosted Agent.
+            You can help with a wide range of tasks including answering questions,
+            providing explanations, brainstorming ideas, and offering guidance.
+            Be concise, clear, and helpful in your responses.
             """,
-        tools: [AIFunctionFactory.Create(GetWeather, name: nameof(GetWeather))]);
+        name: "simple-agent",
+        description: "A simple general-purpose AI assistant");
 
-await agent.RunAIAgentAsync(
-    telemetrySourceName: "WeatherHostedAgent");
+var builder = AgentHost.CreateBuilder(args);
+builder.Services.AddFoundryResponses(agent);
+builder.RegisterProtocol("responses", endpoints => endpoints.MapFoundryResponses());
 
-return;
-
-[Description("Get a simulated weather forecast for a given location.")]
-static string GetWeather([Description("The city or location to forecast.")] string location)
-{
-    string normalizedLocation = location.Trim();
-    if (string.IsNullOrWhiteSpace(normalizedLocation))
-    {
-        throw new ArgumentException("Location is required.", nameof(location));
-    }
-
-    string[] conditions = ["sunny", "cloudy", "rainy", "windy"];
-    int seed = Math.Abs(normalizedLocation.ToLowerInvariant().GetHashCode());
-    string condition = conditions[seed % conditions.Length];
-    int highCelsius = 12 + (seed % 15);
-    int lowCelsius = Math.Max(4, highCelsius - 7);
-
-    return $"Simulated forecast for {normalizedLocation}: {condition} with temperatures from {lowCelsius}C to {highCelsius}C.";
-}
+var app = builder.Build();
+app.Run();
